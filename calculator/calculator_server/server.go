@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 
@@ -25,6 +26,35 @@ func (*server) Sum(ctx context.Context, in *calculatorpb.SumRequest) (*calculato
 	}
 
 	return res, nil
+}
+
+func (*server) FindMaximum(stream calculatorpb.CalculatorService_FindMaximumServer) error {
+	log.Printf("FindMaximum function was invoked")
+	maximum := int32(0)
+
+	for {
+		req, err := stream.Recv()
+		if err != io.EOF {
+			return nil
+		}
+
+		if err != nil {
+			log.Fatalf("Error while reading client stream: %v", err)
+		}
+
+		number := req.GetNumber()
+		if number > maximum {
+			maximum = number
+			sendErr := stream.Send(&calculatorpb.FindMaximumResponse{
+				Maximum: maximum,
+			})
+
+			if sendErr != nil {
+				log.Fatalf("Error while sending data to client stream: %v", sendErr)
+				return sendErr
+			}
+		}
+	}
 }
 
 func main() {
